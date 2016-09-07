@@ -2,7 +2,7 @@
 appvey add <url> [appveyor.yml]
 
 10:30-13:15
-13:30-
+13:30-14;50
 """
 import sys
 from pprint import pprint as pp
@@ -43,8 +43,9 @@ class API(object):
         return requests.post(self.apiurl + path, headers=self.headers, data=data)
 
     def put(self, path, data=None):
-        self.headers['Content-Type'] = 'plain/text'
-        return requests.put(self.apiurl + path, headers=self.headers, data=data)
+        h = self.headers.copy()
+        h['Content-Type'] = 'plain/text'
+        return requests.put(self.apiurl + path, headers=h, data=data)
 
 api = API('https://ci.appveyor.com', headers=auth)
 #roles = api.get('/api/roles')
@@ -61,22 +62,30 @@ for p in projects:
 
 def build(project):
     '''project is string "account/slug"'''
-    name, slug = project.split()
+    name, slug = project.split('/')
     payload = {
         'accountName': name,
         'projectSlug': slug,
     }
-    res = api.post('/api/builds', data=payload)
+    resp = api.post('/api/builds', data=payload)
+    """pp(resp)
+    pp(resp.content)
+    pp(resp.raw.read())"""
+    print('build started for %s' % (project))
+    return resp
 
 def config(project, ymlpath='appveyor.yml'):
     resp = api.put('/api/projects/%s/settings/yaml' % (project), data=open(ymlpath, 'rb').read())
     #resp = api.put('/api/projects/%s/settings/yaml' % (project), data='version: 1.0.{build}\n')
-    pp(resp)
-    pp(resp.content)
-    pp(resp.raw.read())
     if resp.status_code == 500:
         # [ ] validate
         print('error 500: most likely appveyor.yml is invalid' % resp.content)
+    if resp.status_code != 204:
+        print('error: config update returned %s' % resp.status_code)
+        return resp
+    print('configured %s from %s' % (project, ymlpath))
+    return resp
+    
 
 if sys.argv[1:]:
     if sys.argv[1] == 'add':
@@ -101,11 +110,10 @@ if sys.argv[1:]:
                 config(path, ymlpath=sys.argv[3])
             
             # def start build
-            payload = {
-                'accountName': res["accountName"],
-                'projectSlug': res["slug"],
-            }
-            resp = api.post('/api/builds', data=payload)
-            pp(resp)
-            pp(resp.json())
-    
+            build(path)
+
+"""
+resp = build('techtonik/ruruki')
+pp(resp)
+pp(resp.json())
+"""
