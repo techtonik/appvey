@@ -1,8 +1,8 @@
 """
 appvey add <url> [appveyor.yml]
 
-start: 10:30
-end: 13:15
+10:30-13:15
+13:30-
 """
 import sys
 from pprint import pprint as pp
@@ -12,6 +12,23 @@ import tablib
 
 token = open('.bearer', 'rb').read().strip()
 auth ={'Authorization': 'Bearer %s' % token}
+
+
+"""
+try: # for Python 3
+    from http.client import HTTPConnection
+except ImportError:
+    from httplib import HTTPConnection
+HTTPConnection.debuglevel = 1
+
+import logging
+logging.basicConfig() # you need to initialize logging, otherwise you will not see anything from requests
+logging.getLogger().setLevel(logging.DEBUG)
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
+"""
+
 
 class API(object):
     '''helper for REST server on top of requests'''
@@ -23,22 +40,43 @@ class API(object):
         return requests.get(self.apiurl + path, headers=self.headers).json()
 
     def post(self, path, data=None):
-        return requests.post(self.apiurl + path, headers=self.headers, data=data).json()
+        return requests.post(self.apiurl + path, headers=self.headers, data=data)
 
     def put(self, path, data=None):
+        self.headers['Content-Type'] = 'plain/text'
         return requests.put(self.apiurl + path, headers=self.headers, data=data)
 
-api = API('https://ci.appveyor.com/', headers=auth)
+api = API('https://ci.appveyor.com', headers=auth)
 #roles = api.get('/api/roles')
 
 projects = api.get('/api/projects')
 #projdata = tablib.Dataset()
 #projdata.json = projects
 reponames = [p['repositoryName'] for p in projects]
-buildurls = ["%s/%s" % (p['accountName'], p['repositoryName']) for p in projects]
+slugs = ["%s/%s" % (p['accountName'], p['slug']) for p in projects]
 
 for p in projects:
-    print("%-20s %-20s %s" % (p['slug'], p['name'], p['repositoryName']))
+    print("%s/%-16s %s" % (p['accountName'], p['slug'], p['repositoryName']))
+
+
+def build(project):
+    '''project is string "account/slug"'''
+    name, slug = project.split()
+    payload = {
+        'accountName': name,
+        'projectSlug': slug,
+    }
+    res = api.post('/api/builds', data=payload)
+
+def config(project, ymlpath='appveyor.yml'):
+    resp = api.put('/api/projects/%s/settings/yaml' % (project), data=open(ymlpath, 'rb').read())
+    #resp = api.put('/api/projects/%s/settings/yaml' % (project), data='version: 1.0.{build}\n')
+    pp(resp)
+    pp(resp.content)
+    pp(resp.raw.read())
+    if resp.status_code == 500:
+        # [ ] validate
+        print('error 500: most likely appveyor.yml is invalid' % resp.content)
 
 if sys.argv[1:]:
     if sys.argv[1] == 'add':
@@ -59,27 +97,15 @@ if sys.argv[1:]:
             print('created https://ci.appveyor.com/project/' + path)
 
             # def config
-            if sys.argv[2:]:
-                resp = api.put('/api/projects/%s/settings/yaml' % (path), data=open('appveyor.yml', 'rb').read())
+            if sys.argv[3:]:
+                config(path, ymlpath=sys.argv[3])
             
-            if resp.status_code == 200:
-                res = resp.json()
-
-                # def start build
-                payload = {
-                    'accountName': res["accountName"],
-                    'projectSlug': res["slug"],
-                }
-                resp = api.post('/api/builds', data=payload)
-                pp(resp.json())
+            # def start build
+            payload = {
+                'accountName': res["accountName"],
+                'projectSlug': res["slug"],
+            }
+            resp = api.post('/api/builds', data=payload)
+            pp(resp)
+            pp(resp.json())
     
-
-def build(project, name):
-    payload = {
-        'accountName': 'techtonik',
-        'projectSlug': 'ruruki',
-        # master
-        #'branch': 'master',
-    }
-    res = api.post('/api/builds', data=payload)
-    pp(res.json())
