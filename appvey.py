@@ -2,7 +2,7 @@
 appvey add <url> [appveyor.yml]
 
 10:30-13:15
-13:30-14;50
+13:30-14:50
 """
 import sys
 from pprint import pprint as pp
