@@ -39,8 +39,8 @@ class API(object):
     def get(self, path):
         return requests.get(self.apiurl + path, headers=self.headers).json()
 
-    def post(self, path, data=None):
-        return requests.post(self.apiurl + path, headers=self.headers, data=data)
+    def post(self, path, data=None, files=None):
+        return requests.post(self.apiurl + path, headers=self.headers, data=data, files=files)
 
     def put(self, path, data=None):
         h = self.headers.copy()
@@ -117,3 +117,9 @@ resp = build('techtonik/ruruki')
 pp(resp)
 pp(resp.json())
 """
+
+# https://ci.appveyor.com/api/buildjobs/l7ltlhj21kkrm7df/log
+
+files = {'file': open('nosetests.xml', 'rb')}
+resp = api.post('/api/testresults/xunit/l7ltlhj21kkrm7df', files=files)
+print resp
