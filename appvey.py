@@ -68,7 +68,7 @@ def build(project):
     print('build started for %s' % (project))
     return resp
 
-def config(project, ymlpath='appveyor.yml'):
+def update(project, ymlpath='appveyor.yml'):
     resp = api.put('/api/projects/%s/settings/yaml' % (project), data=open(ymlpath, 'rb').read())
     #resp = api.put('/api/projects/%s/settings/yaml' % (project), data='version: 1.0.{build}\n')
     if resp.status_code == 500:
@@ -102,7 +102,7 @@ def auth_check():
     return True
 
 def add(api, repo):
-    '''add new project to AppVeyor'''
+    '''add new project to AppVeyor, return its urlpath'''
     # https://www.appveyor.com/docs/api/projects-builds/#add-project
     payload = {
         "repositoryProvider":"git",
@@ -111,9 +111,9 @@ def add(api, repo):
     resp = api.post('/api/projects', data=payload)
     if resp.status_code == 200:
         res = resp.json()
-        path = '%s/%s' % (res["accountName"], res["slug"])
-        print('created project https://ci.appveyor.com/project/' + path)
-        return True
+        urlpath = '%s/%s' % (res["accountName"], res["slug"])
+        print('created project https://ci.appveyor.com/project/' + urlpath)
+        return urlpath
 
 
 if __name__ == '__main__':
@@ -126,18 +126,23 @@ if __name__ == '__main__':
     projects = api.get('/api/projects')
     #projdata = tablib.Dataset()
     #projdata.json = projects
-    reponames = [p['repositoryName'] for p in projects]
-    slugs = ["%s/%s" % (p['accountName'], p['slug']) for p in projects]
+    repos = {p['repositoryName']: '%s/%s' % (p['accountName'], p['slug']) for p in projects}
 
     for p in projects:
-        print("%s/%-16s %s" % (p['accountName'], p['slug'], p['repositoryName']))
+        urlpath = '%s/%s' % (p['accountName'], p['slug'])
+        print("%-16s %s" % (urlpath, p['repositoryName']))
 
     # detect repository
-    repo = run_capture('git remote get-url origin').output
-    if repo not in reponames:
-        resp = add(api, repo)
+    repo = run_capture('git remote get-url origin').output.strip()
+    print('detected: %s' % repo)
+    if repo not in repos.keys():
+        urlpath = add(api, repo)
+    else:
+        urlpath = repos[repo]
 
     # update config
+    print('updating: %s' % urlpath)
+    update(urlpath)
 
 
 if sys.argv[1:]:
@@ -146,10 +151,11 @@ if sys.argv[1:]:
         if repo in reponames:
             sys.exit('error: already added %s' % repo)
 
-        if add(api, repo):
+        urlpath = add(api, repo)
+        if urlpath:
             # def config
             if sys.argv[3:]:
-                config(path, ymlpath=sys.argv[3])
+                update(path, ymlpath=sys.argv[3])
             
             # def start build
             build(path)
@@ -162,6 +168,6 @@ pp(resp.json())
 
 # https://ci.appveyor.com/api/buildjobs/l7ltlhj21kkrm7df/log
 
-files = {'file': open('nosetests.xml', 'rb')}
-resp = api.post('/api/testresults/xunit/l7ltlhj21kkrm7df', files=files)
-print resp
+#files = {'file': open('nosetests.xml', 'rb')}
+#resp = api.post('/api/testresults/xunit/l7ltlhj21kkrm7df', files=files)
+#print resp
