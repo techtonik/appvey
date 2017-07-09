@@ -1,9 +1,18 @@
+#!/usr/bin/env python
 """
-appvey add <url> [appveyor.yml]
+Kick AppVeyor builds.
 
-10:30-13:15
-13:30-14:50
+Automatically creates AppVeyor project if it doesn't exist for
+current git repository URL (uses origin), uploads settings from
+local appveyor.yml (always) and kicks build.
+
+usage: appvey
+
 """
+
+__author__ = "anatoly techtonik <techtonik@gmail.com>"
+__license__ = "Public Domain"
+
 import os
 import sys
 from pprint import pprint as pp
@@ -146,31 +155,3 @@ if __name__ == '__main__':
 
     # kick da build
     build(urlpath)
-
-
-if sys.argv[1:]:
-    if sys.argv[1] == 'add':
-        repo = sys.argv[2]
-        if repo in reponames:
-            sys.exit('error: already added %s' % repo)
-
-        urlpath = add(api, repo)
-        if urlpath:
-            # def config
-            if sys.argv[3:]:
-                update(path, ymlpath=sys.argv[3])
-            
-            # def start build
-            build(urlpath)
-
-"""
-resp = build('techtonik/ruruki')
-pp(resp)
-pp(resp.json())
-"""
-
-# https://ci.appveyor.com/api/buildjobs/l7ltlhj21kkrm7df/log
-
-#files = {'file': open('nosetests.xml', 'rb')}
-#resp = api.post('/api/testresults/xunit/l7ltlhj21kkrm7df', files=files)
-#print resp
