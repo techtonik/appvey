@@ -4,15 +4,20 @@ appvey add <url> [appveyor.yml]
 10:30-13:15
 13:30-14:50
 """
+import os
 import sys
 from pprint import pprint as pp
 
 import requests
 import tablib
 
-token = open('.bearer', 'rb').read().strip()
-auth ={'Authorization': 'Bearer %s' % token}
+TOKENFILE = '.appveyor_token'
 
+PY3K = sys.version_info >= (3, 0)
+if PY3K:
+    enter = input
+else:
+    enter = raw_input
 
 """
 try: # for Python 3
@@ -32,9 +37,9 @@ requests_log.propagate = True
 
 class API(object):
     '''helper for REST server on top of requests'''
-    def __init__(self, apiurl, headers):
+    def __init__(self, apiurl, auth):
 	self.apiurl = apiurl
-        self.headers = headers
+        self.headers = auth
 
     def get(self, path):
         return requests.get(self.apiurl + path, headers=self.headers).json()
@@ -46,18 +51,6 @@ class API(object):
         h = self.headers.copy()
         h['Content-Type'] = 'plain/text'
         return requests.put(self.apiurl + path, headers=h, data=data)
-
-api = API('https://ci.appveyor.com', headers=auth)
-#roles = api.get('/api/roles')
-
-projects = api.get('/api/projects')
-#projdata = tablib.Dataset()
-#projdata.json = projects
-reponames = [p['repositoryName'] for p in projects]
-slugs = ["%s/%s" % (p['accountName'], p['slug']) for p in projects]
-
-for p in projects:
-    print("%s/%-16s %s" % (p['accountName'], p['slug'], p['repositoryName']))
 
 
 def build(project):
@@ -85,7 +78,44 @@ def config(project, ymlpath='appveyor.yml'):
         return resp
     print('configured %s from %s' % (project, ymlpath))
     return resp
-    
+
+def auth():
+    """return dict with authentication header"""
+    if not os.path.exists('.appveyor_token'):
+        print('please enter your AppVeyor API token. you can find it at')
+        print('https://ci.appveyor.com/api-token')
+        print('it will be cached in .appveyor_token file in current dir')
+        token = enter(': ')        
+        with open(TOKENFILE, 'wb') as tf:
+            tf.write(token.strip())
+    token = open(TOKENFILE, 'rb').read().strip()
+    return {'Authorization': 'Bearer %s' % token}
+
+def auth_check():
+    api = API('https://ci.appveyor.com', auth())
+    roles = api.get('/api/roles')
+    if 'message' in roles and roles['message'] == 'Authorization required':
+        return False
+    return True
+
+
+if __name__ == '__main__':
+
+    if not auth_check():
+        sys.exit('Authentication Failed. Remove %s and try again.' % TOKENFILE)
+
+    api = API('https://ci.appveyor.com', auth())
+    projects = api.get('/api/projects')
+    #projdata = tablib.Dataset()
+    #projdata.json = projects
+    reponames = [p['repositoryName'] for p in projects]
+    slugs = ["%s/%s" % (p['accountName'], p['slug']) for p in projects]
+
+    for p in projects:
+        print("%s/%-16s %s" % (p['accountName'], p['slug'], p['repositoryName']))
+
+
+
 
 if sys.argv[1:]:
     if sys.argv[1] == 'add':
