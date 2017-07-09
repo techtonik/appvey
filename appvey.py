@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Kick AppVeyor builds.
+Kick AppVeyor builds
 
 Automatically creates AppVeyor project if it doesn't exist for
 current git repository URL (uses origin), uploads settings from
@@ -12,7 +12,8 @@ usage: appvey
 
 __author__ = "anatoly techtonik <techtonik@gmail.com>"
 __license__ = "Public Domain"
-__version__ = "1234"
+__version__ = "1"
+__url__ = "https://github.com/techtonik/appvey"
 
 import os
 import sys
