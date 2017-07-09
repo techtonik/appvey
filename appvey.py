@@ -12,6 +12,7 @@ usage: appvey
 
 __author__ = "anatoly techtonik <techtonik@gmail.com>"
 __license__ = "Public Domain"
+__version__ = "1234"
 
 import os
 import sys
