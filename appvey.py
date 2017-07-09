@@ -144,6 +144,9 @@ if __name__ == '__main__':
     print('updating: %s' % urlpath)
     update(urlpath)
 
+    # kick da build
+    build(urlpath)
+
 
 if sys.argv[1:]:
     if sys.argv[1] == 'add':
@@ -158,7 +161,7 @@ if sys.argv[1:]:
                 update(path, ymlpath=sys.argv[3])
             
             # def start build
-            build(path)
+            build(urlpath)
 
 """
 resp = build('techtonik/ruruki')
