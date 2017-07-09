@@ -126,8 +126,7 @@ def add(api, repo):
         return urlpath
 
 
-if __name__ == '__main__':
-
+def main():
     if not auth_check():
         sys.exit('Authentication Failed. Remove %s and try again.' % TOKENFILE)
 
@@ -156,3 +155,6 @@ if __name__ == '__main__':
 
     # kick da build
     build(urlpath)
+
+if __name__ == '__main__':
+    main()
