@@ -9,7 +9,8 @@ import sys
 from pprint import pprint as pp
 
 import requests
-import tablib
+from shellrun import run_capture
+#import tablib
 
 TOKENFILE = '.appveyor_token'
 
@@ -37,9 +38,9 @@ requests_log.propagate = True
 
 class API(object):
     '''helper for REST server on top of requests'''
-    def __init__(self, apiurl, auth):
+    def __init__(self, apiurl, headers):
 	self.apiurl = apiurl
-        self.headers = auth
+        self.headers = headers
 
     def get(self, path):
         return requests.get(self.apiurl + path, headers=self.headers).json()
@@ -79,8 +80,9 @@ def config(project, ymlpath='appveyor.yml'):
     print('configured %s from %s' % (project, ymlpath))
     return resp
 
+
 def auth():
-    """return dict with authentication header"""
+    '''return dict with authentication header'''
     if not os.path.exists('.appveyor_token'):
         print('please enter your AppVeyor API token. you can find it at')
         print('https://ci.appveyor.com/api-token')
@@ -93,10 +95,25 @@ def auth():
 
 def auth_check():
     api = API('https://ci.appveyor.com', auth())
+    # https://www.appveyor.com/docs/api/team/#get-roles
     roles = api.get('/api/roles')
     if 'message' in roles and roles['message'] == 'Authorization required':
         return False
     return True
+
+def add(api, repo):
+    '''add new project to AppVeyor'''
+    # https://www.appveyor.com/docs/api/projects-builds/#add-project
+    payload = {
+        "repositoryProvider":"git",
+        "repositoryName":repo
+    }
+    resp = api.post('/api/projects', data=payload)
+    if resp.status_code == 200:
+        res = resp.json()
+        path = '%s/%s' % (res["accountName"], res["slug"])
+        print('created project https://ci.appveyor.com/project/' + path)
+        return True
 
 
 if __name__ == '__main__':
@@ -105,6 +122,7 @@ if __name__ == '__main__':
         sys.exit('Authentication Failed. Remove %s and try again.' % TOKENFILE)
 
     api = API('https://ci.appveyor.com', auth())
+    # https://www.appveyor.com/docs/api/projects-builds/#get-projects
     projects = api.get('/api/projects')
     #projdata = tablib.Dataset()
     #projdata.json = projects
@@ -114,7 +132,12 @@ if __name__ == '__main__':
     for p in projects:
         print("%s/%-16s %s" % (p['accountName'], p['slug'], p['repositoryName']))
 
+    # detect repository
+    repo = run_capture('git remote get-url origin').output
+    if repo not in reponames:
+        resp = add(api, repo)
 
+    # update config
 
 
 if sys.argv[1:]:
@@ -122,19 +145,8 @@ if sys.argv[1:]:
         repo = sys.argv[2]
         if repo in reponames:
             sys.exit('error: already added %s' % repo)
-       
-        # https://www.appveyor.com/docs/api/projects-builds/#add-project
-        payload = {
-            "repositoryProvider":"git",
-            "repositoryName":repo
-        }
-        resp = api.post('/api/projects', data=payload)
-        # [ ] if resp.status == 200:
-        if resp.status_code == 200:
-            res = resp.json()
-            path = '%s/%s' % (res["accountName"], res["slug"])
-            print('created https://ci.appveyor.com/project/' + path)
 
+        if add(api, repo):
             # def config
             if sys.argv[3:]:
                 config(path, ymlpath=sys.argv[3])
