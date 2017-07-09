@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
     for p in projects:
         urlpath = '%s/%s' % (p['accountName'], p['slug'])
-        print("%-16s %s" % (urlpath, p['repositoryName']))
+        print("%-32s %s" % (urlpath, p['repositoryName']))
 
     # detect repository
     repo = run_capture('git remote get-url origin').output.strip()
