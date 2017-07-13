@@ -4,8 +4,10 @@ local appveyor.yml (always) and kicks build.
 
 Example run for testing https://github.com/techtonik/piglit:
 ```
-> pip install -r requirements.txt
-> appvey.py
+> git clone https://github.com/techtonik/piglit
+> cd piglit
+> pip install appvey
+> appvey
 techtonik/piglit                 https://github.com/techtonik/piglit
 techtonik/augeas                 https://github.com/hercules-team/augeas
 techtonik/linkchecker            https://github.com/wummel/linkchecker
