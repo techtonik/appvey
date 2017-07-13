@@ -2,11 +2,14 @@ Automatically creates AppVeyor project if it doesn't exist for
 current git repository URL (uses origin), uploads settings from
 local appveyor.yml (always) and kicks build.
 
+Installation (needs Python):
+
+    pip install appvey
+
 Example run for testing https://github.com/techtonik/piglit:
 ```
 > git clone https://github.com/techtonik/piglit
 > cd piglit
-> pip install appvey
 > appvey
 techtonik/piglit                 https://github.com/techtonik/piglit
 techtonik/augeas                 https://github.com/hercules-team/augeas
